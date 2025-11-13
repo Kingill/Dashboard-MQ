@@ -1,5 +1,6 @@
 {
   "title": "Dashboard Groupe UA2118",
   "content": "Page personnalisée pour le groupe UA2118.\n\nAjoutez ici le contenu spécifique à cette unité.",
-  "metrics": true
+  "metrics": true,
+  "prometheusQueries": []
 }

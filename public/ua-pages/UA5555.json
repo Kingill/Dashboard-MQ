@@ -1,0 +1,6 @@
+{
+  "title": "Dashboard Groupe UA5555",
+  "content": "Page personnalisée pour le groupe UA5555.\n\nAjoutez ici le contenu spécifique à cette unité.",
+  "metrics": true,
+  "prometheusQueries": []
+}

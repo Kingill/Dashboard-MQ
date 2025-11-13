@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
 // Utilise la variable d'environnement ou fallback vers proxy
-const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
+// CORRECTION: Ne pas ajouter /api ici car VITE_API_URL contient déjà /api
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export function useUAPages() {
   const [uaPages, setUaPages] = useState({});

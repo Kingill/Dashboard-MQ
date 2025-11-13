@@ -9,11 +9,15 @@
     "dev": "node --watch api-server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "axios": "^1.13.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
   },
-  "devDependencies": {},
-  "keywords": ["api", "ua-pages", "dashboard"],
+  "keywords": [
+    "api",
+    "ua-pages",
+    "dashboard"
+  ],
   "author": "",
   "license": "MIT"
 }

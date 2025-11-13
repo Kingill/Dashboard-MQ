@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Edit, Download, Activity, BarChart3, Users, AlertCircle } from 'lucide-react';
 import { styles } from '../styles/styles';
+import GlobalMetrics from './GlobalMetrics';
+import UAMetrics from './UAMetrics';
 
 export default function Dashboard({ 
   selectedUA, 
@@ -152,7 +154,12 @@ export default function Dashboard({
         )}
       </div>
 
-      {/* Métriques */}
+      {/* Métriques Globales Prometheus - Affichées partout */}
+      {!editMode && (
+        <GlobalMetrics autoRefresh={30000} />
+      )}
+
+      {/* Métriques anciennes (à conserver ou supprimer selon vos besoins) */}
       {displayPage.metrics && !editMode && (
         <>
           <div style={styles.metricsGrid}>
@@ -200,32 +207,12 @@ export default function Dashboard({
               </div>
             </div>
           </div>
-
-          <div style={styles.cardLarge}>
-            <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px' }}>
-              Métriques Prometheus - Groupe {selectedUA}
-            </h2>
-            <p style={{ color: '#718096', marginBottom: '24px' }}>
-              Intégration des métriques Prometheus spécifiques à votre groupe
-            </p>
-
-            <div style={{
-              background: '#f7fafc',
-              borderRadius: '12px',
-              padding: '60px 20px',
-              textAlign: 'center',
-              color: '#a0aec0',
-              fontSize: '14px',
-              border: '2px dashed #e2e8f0'
-            }}>
-              <BarChart3 size={48} style={{ margin: '0 auto 16px' }} />
-              <p>Zone réservée pour vos graphiques Prometheus</p>
-              <p style={{ fontSize: '12px', marginTop: '8px' }}>
-                Connectez votre instance Prometheus pour afficher les données en temps réel
-              </p>
-            </div>
-          </div>
         </>
+      )}
+
+      {/* Métriques Prometheus spécifiques à l'UA */}
+      {displayPage.metrics && !editMode && selectedUA && (
+        <UAMetrics uaName={selectedUA} autoRefresh={30000} />
       )}
     </div>
   );

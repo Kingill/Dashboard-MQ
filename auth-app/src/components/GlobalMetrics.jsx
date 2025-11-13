@@ -1,0 +1,150 @@
+// GlobalMetrics.jsx
+import React, { useEffect } from 'react';
+import usePrometheus from '../hooks/usePrometheus';
+import PrometheusWidget from './PrometheusWidget';
+
+const GlobalMetrics = ({ autoRefresh = 30000 }) => {
+  const { 
+    globalMetrics, 
+    loading, 
+    error, 
+    isHealthy,
+    fetchGlobalMetrics, 
+    setupAutoRefresh,
+    checkHealth 
+  } = usePrometheus();
+
+  useEffect(() => {
+    // Charge les métriques au montage
+    checkHealth();
+    fetchGlobalMetrics();
+
+    // Configure le rafraîchissement automatique
+    const cleanup = setupAutoRefresh('global', 'all', autoRefresh);
+
+    return cleanup;
+  }, [fetchGlobalMetrics, setupAutoRefresh, checkHealth, autoRefresh]);
+
+  if (!isHealthy) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.healthWarning}>
+          ⚠️ Prometheus n'est pas accessible. Vérifiez la configuration.
+        </div>
+      </div>
+    );
+  }
+
+  if (loading && globalMetrics.length === 0) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.loader}>Chargement des métriques globales...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.error}>
+          Erreur lors du chargement des métriques: {error}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h2 style={styles.title}>📊 Métriques Globales</h2>
+        {autoRefresh > 0 && (
+          <span style={styles.refreshBadge}>
+            🔄 Rafraîchissement: {autoRefresh / 1000}s
+          </span>
+        )}
+      </div>
+      
+      <div style={styles.grid}>
+        {globalMetrics.map((metric) => (
+          <div key={metric.id} style={styles.gridItem}>
+            <PrometheusWidget metric={metric} />
+          </div>
+        ))}
+      </div>
+
+      {globalMetrics.length === 0 && (
+        <div style={styles.empty}>
+          Aucune métrique globale configurée.
+          <br />
+          Ajoutez des requêtes dans <code>public/prometheus-global.json</code>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const styles = {
+  container: {
+    padding: '20px',
+    maxWidth: '1400px',
+    margin: '0 auto',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px',
+  },
+  title: {
+    margin: 0,
+    fontSize: '24px',
+    fontWeight: '600',
+    color: '#333',
+  },
+  refreshBadge: {
+    backgroundColor: '#e3f2fd',
+    color: '#1976d2',
+    padding: '6px 12px',
+    borderRadius: '16px',
+    fontSize: '12px',
+    fontWeight: '500',
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gap: '16px',
+  },
+  gridItem: {
+    minHeight: '150px',
+  },
+  loader: {
+    textAlign: 'center',
+    padding: '40px',
+    color: '#666',
+    fontSize: '16px',
+  },
+  error: {
+    backgroundColor: '#ffebee',
+    color: '#c62828',
+    padding: '16px',
+    borderRadius: '8px',
+    border: '1px solid #ef5350',
+  },
+  healthWarning: {
+    backgroundColor: '#fff3e0',
+    color: '#e65100',
+    padding: '16px',
+    borderRadius: '8px',
+    border: '1px solid #ffb74d',
+    textAlign: 'center',
+  },
+  empty: {
+    textAlign: 'center',
+    padding: '60px 20px',
+    color: '#999',
+    fontSize: '14px',
+    lineHeight: '1.8',
+  },
+};
+
+export default GlobalMetrics;
