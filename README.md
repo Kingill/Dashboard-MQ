@@ -1,395 +1,386 @@
-# Dashboard MQ - Application Multi-UA
+# 📊 Dashboard MQ - Monitoring Multi-UA avec Prometheus
+
+Dashboard de monitoring en temps réel pour la gestion de files d'attente MessageQueue avec intégration Prometheus par unité d'affectation (UA).
+
+## 🚀 Fonctionnalités
+
+- **Multi-UA** : Gestion de plusieurs unités d'affectation avec pages personnalisées
+- **Métriques temps réel** : Monitoring CPU, mémoire, goroutines, services actifs
+- **Graphiques interactifs** : Visualisation des tendances sur 1 heure avec recharts
+- **Auto-refresh** : Actualisation automatique toutes les 30 secondes
+- **Configuration dynamique** : Métriques Prometheus configurables par fichiers JSON
+- **Authentification** : Système d'authentification OAuth intégré
+- **Responsive** : Interface adaptative pour desktop et mobile
+
+---
 
 ## 📁 Structure du projet
 
 ```
 dashboard-mq/
-├── api-server/                # 🔌 Backend API (Express)
-│   ├── api-server.js         # Serveur API REST
-│   ├── package.json          # Dépendances API
-│   └── node_modules/         # Modules npm
+├── api-server/              # Backend Express + API Prometheus
+│   ├── api-server.js        # Serveur principal avec routes
+│   ├── .env                 # Configuration backend (PORT, PROMETHEUS_URL)
+│   └── package.json
 │
-├── auth-app/                  # ⚛️ Frontend React (Vite)
-│   ├── src/                  # Code source React
-│   │   ├── App.jsx           # Navigation principale
-│   │   ├── main.jsx          # Point d'entrée
-│   │   ├── components/       # Composants UI
-│   │   │   ├── LoginPage.jsx
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── ProfilePage.jsx
-│   │   │   ├── AdminPanel.jsx
-│   │   │   └── Sidebar.jsx
-│   │   ├── hooks/            # Hooks personnalisés
-│   │   │   ├── useAuth.js    # Authentification + SessionStorage
-│   │   │   └── useUAPages.js # Gestion pages UA (API)
-│   │   └── styles/
-│   │       └── styles.js     # Tous les styles
-│   ├── index.html            # Template HTML
-│   ├── vite.config.js        # Configuration Vite
-│   ├── package.json          # Dépendances React
-│   └── node_modules/         # Modules npm
+├── auth-app/                # Frontend React + Vite
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Dashboard.jsx           # Composant principal
+│   │   │   ├── GlobalMetrics.jsx       # Métriques globales Prometheus
+│   │   │   ├── UAMetrics.jsx           # Métriques UA spécifiques
+│   │   │   └── PrometheusWidget.jsx    # Widget générique (gauge/graph)
+│   │   │
+│   │   └── hooks/
+│   │       ├── usePrometheus.js        # Hook pour fetch Prometheus
+│   │       └── useUAPages.js           # Hook pour gestion pages UA
+│   │
+│   ├── .env                 # Variables d'environnement
+│   ├── vite.config.js       # Configuration Vite + proxy
+│   └── package.json
 │
 └── public/
-    └── ua-pages/              # 📄 Stockage pages UA (JSON)
-        ├── index.json        # Liste des UAs disponibles
-        ├── TestUA.json       # Exemple de page UA
-        └── 2164.json         # Exemple de page UA
+    ├── prometheus-global.json          # Configuration métriques globales
+    └── ua-pages/
+        ├── UA2164.json                 # Config UA TestUA (avec Prometheus)
+        ├── UA2118.json                 # Config UA 2118
+        └── 8888.json                   # Config UA 8888
 ```
 
 ---
 
-## 🚀 Installation & Démarrage
+## 🛠️ Installation
 
-### 1️⃣ Backend API (Express)
+### Prérequis
 
+- **Node.js** >= 18.x
+- **Prometheus** sur http://localhost:9090
+- **npm** ou **yarn**
+
+### 1. Cloner le repository
+
+```bash
+git clone <votre-repo>
+cd dashboard-mq
+```
+
+### 2. Installer les dépendances
+
+#### Backend
 ```bash
 cd api-server
 npm install
-npm start
 ```
 
-**✅ API démarre sur** : `http://localhost:3001`
-
-**Endpoints disponibles** :
-```
-GET    /api/health              # Health check
-GET    /api/ua-pages            # Liste des UAs
-GET    /api/ua-pages/:uaCode    # Page UA spécifique
-POST   /api/ua-pages/:uaCode    # Créer/Modifier
-DELETE /api/ua-pages/:uaCode    # Supprimer
+#### Frontend
+```bash
+cd ../auth-app
+npm install
 ```
 
-### 2️⃣ Frontend React (Vite)
+### 3. Configuration
+
+#### Backend - Créer le fichier .env
+
+```bash
+cd api-server
+cat > .env << 'EOF'
+# Backend API Server Configuration
+PORT=3001
+PROMETHEUS_URL=http://localhost:9090
+EOF
+```
+
+**Si Prometheus est sur un autre serveur :**
+```bash
+# Exemple avec Prometheus distant
+PORT=3001
+PROMETHEUS_URL=http://prometheus.example.com:9090
+```
+
+#### Frontend - Créer le fichier .env
 
 ```bash
 cd auth-app
-npm install
+cat > .env << 'EOF'
+VITE_OAUTH_URL=http://localhost:8000
+VITE_API_URL=/api
+EOF
+```
+
+#### Prometheus - Configuration
+Assurez-vous que Prometheus tourne sur http://localhost:9090
+
+---
+
+## ⚙️ Variables d'environnement
+
+### Backend (`api-server/.env`)
+
+```bash
+# Port du serveur backend
+PORT=3001
+
+# URL de Prometheus (modifiable si Prometheus est ailleurs)
+PROMETHEUS_URL=http://localhost:9090
+```
+
+**Exemples de configurations :**
+
+| Scénario | Configuration |
+|----------|---------------|
+| **Développement local** | `PROMETHEUS_URL=http://localhost:9090` |
+| **Prometheus distant** | `PROMETHEUS_URL=http://prometheus.example.com:9090` |
+| **Docker Compose** | `PROMETHEUS_URL=http://prometheus:9090` |
+| **Avec authentification** | `PROMETHEUS_URL=http://user:pass@prometheus.example.com:9090` |
+| **IP réseau** | `PROMETHEUS_URL=http://192.168.1.50:9090` |
+
+### Frontend (`auth-app/.env`)
+
+```bash
+# URL du serveur OAuth
+VITE_OAUTH_URL=http://localhost:8000
+
+# URL de l'API backend (utilise le proxy Vite)
+VITE_API_URL=/api
+```
+
+**Note importante** : Le frontend utilise le proxy Vite configuré dans `vite.config.js`. Les requêtes vers `/api` sont automatiquement redirigées vers `http://localhost:3001`.
+
+---
+
+## ▶️ Démarrage
+
+### Terminal 1 : Backend
+```bash
+cd api-server
+npm start
+```
+✅ Serveur démarré sur http://localhost:3001
+
+### Terminal 2 : Frontend
+```bash
+cd auth-app
 npm run dev
 ```
+✅ Application disponible sur http://localhost:3000
 
-**✅ Application démarre sur** : `http://localhost:3000`
-
-### 3️⃣ Serveur OAuth (requis)
-
-L'application nécessite un serveur OAuth sur `http://localhost:8000/oauth/token`
-
-**Format de requête** :
+### Terminal 3 : Prometheus (si non démarré)
+```bash
+prometheus --config.file=prometheus.yml
 ```
-POST /oauth/token
-Content-Type: application/x-www-form-urlencoded
+✅ Prometheus disponible sur http://localhost:9090
 
-grant_type=password
-username=<login>
-password=<password>
-client_id=FBI-Appli-Demo
+---
+
+## 📊 Architecture
+
+```
+┌──────────────┐     HTTP      ┌──────────────┐    PromQL    ┌─────────────┐
+│   Frontend   │ ──────────>   │   Backend    │ ──────────>  │ Prometheus  │
+│ React + Vite │   (Proxy)     │   Express    │              │   :9090     │
+│   :3000      │ <────────     │   :3001      │ <──────────  │             │
+└──────────────┘               └──────────────┘              └─────────────┘
+       │                              │
+       │                              │
+       ↓                              ↓
+  /api/ua-pages               /api/prometheus/*
+  /api/prometheus/*           - /health
+                              - /global
+                              - /ua/:name
+                              - /query
+                              - /query_range
 ```
 
-**Réponse attendue** :
+### Flux de données
+
+1. **Frontend** fait une requête vers `/api/prometheus/global`
+2. **Proxy Vite** redirige vers `http://localhost:3001/api/prometheus/global`
+3. **Backend Express** exécute des requêtes PromQL vers Prometheus
+4. **Prometheus** retourne les métriques
+5. **Backend** formate les données et les renvoie au frontend
+6. **Frontend** affiche les métriques dans des widgets (gauges/graphiques)
+
+---
+
+## 🔧 Configuration des métriques
+
+### Métriques globales
+
+Éditer `public/prometheus-global.json` :
+
 ```json
 {
-  "access_token": "eyJhbGci...",
-  "expires_in": 3600
-}
-```
-
-**JWT Payload requis** :
-```json
-{
-  "uid": "user123",
-  "firstName": "Jean",
-  "lastName": "Dupont",
-  "CodeUA": "2164",
-  "roles": "USER:ADMIN",
-  "exp": 1234567890
-}
-```
-
----
-
-## 🎯 Fonctionnalités
-
-### Pour tous les utilisateurs
-
-- ✅ **Connexion OAuth** avec JWT
-- ✅ **Dashboard personnalisé** par code UA
-- ✅ **Métriques en temps réel** (configurable)
-- ✅ **Profil utilisateur** avec rôles
-- ✅ **Session persistante** au refresh (sessionStorage)
-- ✅ **Renouvellement automatique** si actif
-- ✅ **Déconnexion par inactivité** (30min)
-
-### Pour les administrateurs (rôle `ADMIN`)
-
-- ✅ **Sélecteur d'UA** - Visualiser toutes les UAs
-- ✅ **Créer des pages UA** - Nouvelles unités
-- ✅ **Modifier le contenu** - Titre, texte, métriques
-- ✅ **Supprimer des pages** - Gestion complète
-- ✅ **Sauvegarde serveur** - Persistance automatique
-
----
-
-## 🔐 Authentification & Session
-
-### SessionStorage (pas localStorage)
-
-**Avantages** :
-- ✅ Persiste au refresh (F5)
-- ✅ Compatible artifacts Claude.ai
-- ✅ Sécurisé (nettoyage auto à la fermeture)
-- ✅ Session par onglet (isolation)
-
-### Renouvellement automatique
-
-**Comportement** :
-1. **Token expire dans < 10 minutes** ET **utilisateur actif** → Renouvellement auto +1h
-2. **Inactivité > 30 minutes** → Déconnexion automatique
-3. **Activité détectée** : clics, touches clavier, scroll, tactile
-
-**Paramètres** (modifiables dans `auth-app/src/hooks/useAuth.js`) :
-```javascript
-// Ligne ~113 dans le useEffect de vérification
-const RENEW_THRESHOLD = 10 * 60 * 1000;     // 10 minutes
-const INACTIVITY_TIMEOUT = 30 * 60 * 1000;  // 30 minutes
-```
-
----
-
-## 📊 Gestion des pages UA
-
-### Stockage
-
-Les pages UA sont stockées dans `/public/ua-pages/` :
-- `index.json` - Liste des UAs disponibles
-- `{CodeUA}.json` - Données de chaque page UA
-
-**Format d'une page UA** :
-```json
-{
-  "title": "Dashboard Groupe 2164",
-  "content": "Description et informations...",
-  "metrics": true
-}
-```
-
-### API CRUD
-
-**Créer/Modifier** :
-```bash
-curl -X POST http://localhost:3001/api/ua-pages/TestUA \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Mon Dashboard",
-    "content": "Description...",
-    "metrics": true
-  }'
-```
-
-**Lire** :
-```bash
-curl http://localhost:3001/api/ua-pages/TestUA
-```
-
-**Supprimer** :
-```bash
-curl -X DELETE http://localhost:3001/api/ua-pages/TestUA
-```
-
----
-
-## 🔄 Multi-utilisateurs
-
-### ✅ Ce qui fonctionne
-
-| Scénario | Résultat |
-|----------|----------|
-| User A lit une page pendant que User B la modifie | ✅ Fonctionne (User A voit l'ancienne version jusqu'au refresh) |
-| 10 utilisateurs lisent des pages différentes | ✅ Pas de problème |
-| 5 admins créent des pages différentes | ✅ Pas de problème |
-
-### ⚠️ Limitations
-
-| Scénario | Problème | Solution future |
-|----------|----------|----------------|
-| Admin 1 et Admin 2 modifient la même page | Le dernier qui sauvegarde écrase l'autre | WebSocket ou versioning |
-
----
-
-## 🛠️ Configuration
-
-### Frontend (auth-app/vite.config.js)
-
-```javascript
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true
-      }
+  "queries": [
+    {
+      "id": "global_cpu",
+      "name": "CPU Global",
+      "query": "avg(rate(process_cpu_seconds_total[5m])) * 100",
+      "type": "gauge",
+      "unit": "%",
+      "description": "Utilisation CPU moyenne"
+    },
+    {
+      "id": "cpu_trend",
+      "name": "Tendance CPU (1h)",
+      "query": "avg(rate(process_cpu_seconds_total[1m])) * 100",
+      "type": "graph",
+      "unit": "%",
+      "description": "Évolution du CPU sur 1 heure"
     }
-  }
-});
+  ]
+}
 ```
 
-### Backend (api-server/api-server.js)
+### Métriques par UA
 
+Éditer `public/ua-pages/UA2164.json` :
+
+```json
+{
+  "title": "Dashboard TestUA",
+  "content": "Vue d'ensemble du groupe TestUA",
+  "metrics": true,
+  "prometheusQueries": [
+    {
+      "id": "testua_cpu",
+      "name": "CPU",
+      "query": "rate(process_cpu_seconds_total[5m]) * 100",
+      "type": "gauge",
+      "unit": "%"
+    },
+    {
+      "id": "testua_cpu_graph",
+      "name": "Évolution CPU (1h)",
+      "query": "rate(process_cpu_seconds_total[5m]) * 100",
+      "type": "graph",
+      "unit": "%"
+    }
+  ]
+}
+```
+
+### Types de widgets disponibles
+
+| Type | Description | Usage |
+|------|-------------|-------|
+| `gauge` | Valeur unique | Affiche la valeur actuelle (ex: CPU: 2.5%) |
+| `graph` | Graphique temporel | Affiche une courbe d'évolution sur 1h |
+| `table` | Tableau multi-valeurs | Affiche plusieurs séries dans un tableau |
+
+---
+
+## 🌐 Endpoints API
+
+### Pages UA
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Santé de l'API |
+| GET | `/api/ua-pages` | Liste des UAs disponibles |
+| GET | `/api/ua-pages/:uaCode` | Récupérer une page UA |
+| POST | `/api/ua-pages/:uaCode` | Créer/Modifier une page UA |
+| DELETE | `/api/ua-pages/:uaCode` | Supprimer une page UA |
+| GET | `/api/ua-pages-index` | Index des pages UA |
+
+### Prometheus
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/prometheus/health` | Santé de Prometheus |
+| GET | `/api/prometheus/global` | Métriques globales |
+| GET | `/api/prometheus/ua/:name` | Métriques d'une UA spécifique |
+| GET | `/api/prometheus/query` | Requête PromQL instantanée |
+| GET | `/api/prometheus/query_range` | Requête PromQL temporelle |
+| POST | `/api/prometheus/query/multiple` | Requêtes multiples |
+
+### Exemples de requêtes
+
+#### Métriques globales
+```bash
+curl http://localhost:3001/api/prometheus/global | jq .
+```
+
+#### Métriques d'une UA
+```bash
+curl http://localhost:3001/api/prometheus/ua/UA2164 | jq .
+```
+
+#### Requête PromQL custom
+```bash
+curl "http://localhost:3001/api/prometheus/query?query=up" | jq .
+```
+
+---
+
+## 🎨 Interface utilisateur
+
+### Dashboard principal
+
+```
+┌─────────────────────────────────────────────┐
+│ Dashboard MQ - Code UA: UA2164              │
+├─────────────────────────────────────────────┤
+│ 📊 Métriques Globales Prometheus  🔄 30s   │
+│ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐       │
+│ │ CPU  │ │ Mem  │ │Gorou │ │ Serv │       │
+│ │0.04% │ │90 MB │ │ 45   │ │  1   │       │
+│ └──────┘ └──────┘ └──────┘ └──────┘       │
+│                                             │
+│ [Graphique Tendance CPU sur 1h]            │
+├─────────────────────────────────────────────┤
+│ Messages | Succès | Users | Erreurs        │
+│  1,247   | 98.5%  |  24   |    3          │
+├─────────────────────────────────────────────┤
+│ 📈 Métriques UA2164 (TestUA)    🔄 30s     │
+│ ┌──────┐ ┌──────┐ ┌──────┐                │
+│ │ CPU  │ │ Mem  │ │Gorou │                │
+│ │0.04% │ │90 MB │ │ 45   │                │
+│ └──────┘ └──────┘ └──────┘                │
+│                                             │
+│ [Graphique Évolution CPU UA]               │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Erreur "Cannot connect to Prometheus"
+
+**Solution** :
+```bash
+# Vérifier que Prometheus tourne
+curl http://localhost:9090/api/v1/query?query=up
+```
+
+### Erreur 404 `/api/api/prometheus/...`
+
+**Solution** : Vérifier que les hooks utilisent :
 ```javascript
-const PORT = 3001;
-const UA_PAGES_DIR = path.join(__dirname, '../public/ua-pages');
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+fetch(`${API_BASE}/prometheus/global`)  // ✅ Correct
 ```
 
----
+### Métriques ne s'affichent pas
 
-## 🧪 Tests
-
-### Test 1 : Session persistante
-```
-1. Se connecter
-2. Naviguer dans l'application
-3. Appuyer sur F5
-✅ Résultat : Toujours connecté, même page
-```
-
-### Test 2 : Renouvellement automatique
-```
-1. Se connecter
-2. Bouger la souris régulièrement
-3. Attendre que le timer descende sous 10min
-✅ Résultat : Timer remonte à 60min automatiquement
-   Console : "✅ Token renouvelé automatiquement"
-```
-
-### Test 3 : Inactivité
-```
-1. Se connecter
-2. Ne plus toucher l'ordinateur pendant 30min
-✅ Résultat : Déconnexion avec message "Session expirée après inactivité"
-```
-
-### Test 4 : CRUD pages UA (Admin)
-```
-1. Se connecter en tant qu'admin
-2. Aller dans Administration
-3. Créer une nouvelle page UA
-4. La modifier
-5. La supprimer
-✅ Résultat : Toutes les opérations fonctionnent
-```
-
----
-
-## 🐛 Dépannage
-
-### Frontend ne démarre pas
-
+**Debug** :
 ```bash
-cd auth-app
-rm -rf node_modules package-lock.json
-npm install
-npm run dev
-```
-
-### API ne démarre pas
-
-```bash
-cd api-server
-rm -rf node_modules package-lock.json
-npm install
-npm start
-```
-
-### Erreur de connexion OAuth
-
-Vérifier :
-- ✅ Serveur OAuth actif sur `http://localhost:8000`
-- ✅ Format JWT correct
-- ✅ CORS activé sur le serveur OAuth
-
-### Pages UA non sauvegardées
-
-Vérifier :
-- ✅ API active sur port 3001
-- ✅ Dossier `/public/ua-pages/` existe
-- ✅ Permissions d'écriture sur le dossier
-
-### Écran blanc
-
-Ouvrir la console (F12) et vérifier les erreurs :
-```
-Erreurs courantes :
-- "Cannot read property of undefined" → Vérifier useAuth.js
-- "Network error" → Vérifier que l'API tourne
-- Dépendances circulaires → Vérifier l'ordre des hooks
+# Console navigateur (F12) → Onglet Network
+# Vérifier les requêtes vers /api/prometheus/*
 ```
 
 ---
 
-## 📝 Scripts disponibles
+## 📦 Technologies
 
-### Frontend (auth-app/)
-
-```bash
-npm run dev      # Démarrage développement (port 3000)
-npm run build    # Build production
-npm run preview  # Prévisualisation build
-```
-
-### Backend (api-server/)
-
-```bash
-npm start        # Démarrage production
-```
+- **React 18** + **Vite** - Frontend
+- **Express** - Backend
+- **Prometheus** - Métriques
+- **recharts** - Graphiques
 
 ---
 
-## 🔒 Sécurité
+## 👥 Auteur
 
-### Améliorations implémentées
-
-- ✅ **SessionStorage** au lieu de localStorage (moins vulnérable)
-- ✅ **Expiration automatique** des tokens
-- ✅ **Déconnexion par inactivité** 
-- ✅ **Validation JWT** côté client
-- ✅ **Nettoyage automatique** des sessions expirées
-
-### Recommandations pour la production
-
-1. **HTTPS obligatoire** - Chiffrer les communications
-2. **Cookies httpOnly** - Plus sûr que sessionStorage
-3. **Refresh tokens** - Renouvellement côté serveur
-4. **Rate limiting** - Limiter les tentatives de connexion
-5. **CSRF tokens** - Protection contre CSRF
-
----
-
-## 📈 Évolutions possibles
-
-- [ ] **Graphiques Prometheus** - Intégration vraies données
-- [ ] **WebSocket** - Synchronisation temps réel
-- [ ] **Versioning** - Historique des modifications
-- [ ] **React Router** - Navigation URL-based
-- [ ] **Tests unitaires** - Jest + React Testing Library
-- [ ] **TypeScript** - Typage fort
-
----
-
-## 📚 Technologies
-
-| Technologie | Version | Usage |
-|-------------|---------|-------|
-| **React** | 18.2.0 | UI Framework |
-| **Vite** | 4.3.9 | Build tool |
-| **Express** | 4.18.2 | API Backend |
-| **Lucide React** | 0.263.1 | Icons |
-
----
-
-## 📄 Licence
-
-MIT
-
----
-
-**Bon développement ! 🚀**
+**Marquet Gilles** - Dashboard MQ avec intégration Prometheus
