@@ -192,15 +192,27 @@ prometheus --config.file=prometheus.yml
 │ React + Vite │   (Proxy)     │   Express    │              │   :9090     │
 │   :3000      │ <────────     │   :3001      │ <──────────  │             │
 └──────────────┘               └──────────────┘              └─────────────┘
-       │                              │
-       │                              │
-       ↓                              ↓
-  /api/ua-pages               /api/prometheus/*
-  /api/prometheus/*           - /health
-                              - /global
-                              - /ua/:name
-                              - /query
-                              - /query_range
+       │                              │                              │
+       │                              │                              │
+       ↓                              ↓                              ↓
+  Composants React          API Routes Express              IBM MQ Exporter
+  ┌──────────────┐         ┌──────────────────┐            ┌──────────────┐
+  │ - Dashboard  │         │ Auth & JWT       │            │ Métriques MQ │
+  │ - MQMetrics  │         │ /api/auth/*      │            │ - QMGR       │
+  │ - Global     │         │                  │            │ - Queues     │
+  │ - UAMetrics  │         │ UA Pages         │            │ - Channels   │
+  │ - Widgets    │         │ /api/ua-pages/*  │            │ - Topics     │
+  └──────────────┘         │                  │            └──────────────┘
+       │                   │ Prometheus Proxy │
+       │                   │ /api/prometheus/*│
+       │                   │  - /health       │
+       ↓                   │  - /global       │
+  Hooks React             │  - /ua/:name     │
+  ┌──────────────┐         │  - /query        │
+  │ - useAuth    │         │  - /query_range  │
+  │ - usePrometheus        │  - /labels/:name │
+  │ - useUAPages │         └──────────────────┘
+  └──────────────┘
 ```
 
 ### Flux de données
