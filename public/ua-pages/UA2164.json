@@ -1,31 +1,15 @@
 {
-  "title": "Dashboard TestUA",
-  "content": "Vue d'ensemble du groupe TestUA avec métriques Prometheus",
+  "title": "Dashboard Groupe UA2164",
+  "content": "Page personnalisée pour le groupe UA2164.\n\nAjoutez ici le contenu spécifique à cette unité.",
   "metrics": true,
   "prometheusQueries": [
-    {
-      "id": "testua_cpu_current",
-      "name": "CPU Actuel",
-      "query": "rate(process_cpu_seconds_total[5m]) * 100",
-      "type": "gauge",
-      "unit": "%",
-      "description": "Utilisation CPU actuelle"
-    },
-    {
-      "id": "testua_cpu_graph",
+  {
+      "id": "cpu_graph",
       "name": "Évolution CPU (1h)",
       "query": "rate(process_cpu_seconds_total[5m]) * 100",
       "type": "graph",
       "unit": "%",
       "description": "Tendance du CPU sur 1 heure"
-    },
-    {
-      "id": "testua_memory",
-      "name": "Mémoire",
-      "query": "process_resident_memory_bytes / 1024 / 1024",
-      "type": "gauge",
-      "unit": "MB",
-      "description": "Mémoire utilisée"
     }
   ]
 }

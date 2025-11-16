@@ -57,6 +57,11 @@ const GlobalMetrics = ({ autoRefresh = 60000 }) => {
     <div style={styles.container}>
       <div style={styles.header}>
         <h2 style={styles.title}>📊 Métriques Globales</h2>
+        {autoRefresh > 0 && (
+          <span style={styles.refreshBadge}>
+            🔄 Rafraîchissement: {autoRefresh / 500}s
+          </span>
+        )}
       </div>
       
       <div style={styles.grid}>

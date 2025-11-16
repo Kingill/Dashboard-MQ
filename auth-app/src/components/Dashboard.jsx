@@ -3,6 +3,8 @@ import { Edit, Download, Activity, BarChart3, Users, AlertCircle } from 'lucide-
 import { styles } from '../styles/styles';
 import GlobalMetrics from './GlobalMetrics';
 import UAMetrics from './UAMetrics';
+import MQMetrics from './MQMetrics';
+
 
 export default function Dashboard({ 
   selectedUA, 
@@ -163,7 +165,10 @@ export default function Dashboard({
 
       {/* Métriques Prometheus spécifiques à l'UA */}
       {displayPage.metrics && !editMode && selectedUA && (
-        <UAMetrics uaName={selectedUA} autoRefresh={30000} />
+        <>
+          <UAMetrics uaName={selectedUA} autoRefresh={30000} />
+          <MQMetrics uaName={selectedUA} autoRefresh={30000} />
+        </>
       )}
     </div>
   );

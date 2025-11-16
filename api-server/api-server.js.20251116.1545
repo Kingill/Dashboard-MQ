@@ -254,56 +254,20 @@ app.get('/api/prometheus/query_range', async (req, res) => {
       });
     }
 
-    console.log(`📊 API Range Request`);
-    console.log(`   Query: ${query}`);
-    console.log(`   Start: ${start} (${new Date(parseInt(start) * 1000).toLocaleString()})`);
-    console.log(`   End: ${end} (${new Date(parseInt(end) * 1000).toLocaleString()})`);
-    console.log(`   Step: ${step || '15s'}`);
+    console.log(`📊 API Range Request - Query: ${query.substring(0, 100)}...`);
 
-    // Appel direct à Prometheus
-    const response = await axios.get(`${PROMETHEUS_URL}/api/v1/query_range`, {
-      params: { 
-        query, 
-        start: parseInt(start), 
-        end: parseInt(end), 
-        step: step || '15s' 
-      },
-      timeout: 15000,
-      proxy: false
-    });
-
-    if (response.data.status !== 'success') {
-      throw new Error(`Prometheus query failed: ${response.data.error}`);
-    }
-
-    console.log(`✅ Range query response status: ${response.data.status}`);
-    if (response.data.data && response.data.data.result) {
-      console.log(`   Results count: ${response.data.data.result.length}`);
-      if (response.data.data.result.length > 0) {
-        const firstResult = response.data.data.result[0];
-        if (firstResult.values) {
-          console.log(`   Values count: ${firstResult.values.length}`);
-          console.log(`   First value:`, firstResult.values[0]);
-          console.log(`   Last value:`, firstResult.values[firstResult.values.length - 1]);
-        } else {
-          console.log(`   ⚠️ No values array in result!`);
-          console.log(`   Result structure:`, JSON.stringify(firstResult, null, 2));
-        }
-      }
-    } else {
-      console.log(`   ⚠️ No data.result in response!`);
-      console.log(`   Response structure:`, JSON.stringify(response.data, null, 2));
-    }
-
-    // Retourner le format brut de Prometheus
-    res.json(response.data);
+    const result = await prometheusService.queryRange(
+      query, 
+      parseInt(start), 
+      parseInt(end), 
+      step || '15s'
+    );
+    
+    res.json({ success: true, data: result });
   } catch (error) {
     console.error('❌ Error in /api/prometheus/query_range:', error.message);
-    if (error.response) {
-      console.error('   Response data:', error.response.data);
-    }
     res.status(500).json({ 
-      status: 'error',
+      success: false, 
       error: error.message 
     });
   }

@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import usePrometheus from '../hooks/usePrometheus';
 import PrometheusWidget from './PrometheusWidget';
 
-const UAMetrics = ({ uaName, autoRefresh = 30000 }) => {
+const UAMetrics = ({ uaName, autoRefresh = 60000 }) => {
   const { 
     uaMetrics, 
     loading, 

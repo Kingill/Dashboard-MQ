@@ -1,0 +1,6 @@
+{
+  "title": "Dashboard Groupe UA2176",
+  "content": "Page personnalisée pour le groupe UA2176.\n\nAjoutez ici le contenu spécifique à cette unité.",
+  "metrics": true,
+  "prometheusQueries": []
+}

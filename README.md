@@ -19,25 +19,36 @@ Dashboard de monitoring en temps réel pour la gestion de files d'attente Messag
 ```
 dashboard-mq/
 ├── api-server/              # Backend Express + API Prometheus
-│   ├── api-server.js        # Serveur principal avec routes
+│   ├── api-server.js        # Serveur principal avec routes Prometheus & UA
 │   ├── .env                 # Configuration backend (PORT, PROMETHEUS_URL)
 │   └── package.json
 │
 ├── auth-app/                # Frontend React + Vite
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Dashboard.jsx           # Composant principal
+│   │   │   ├── App.jsx                 # Point d'entrée application
+│   │   │   ├── Dashboard.jsx           # Composant principal dashboard
 │   │   │   ├── GlobalMetrics.jsx       # Métriques globales Prometheus
 │   │   │   ├── UAMetrics.jsx           # Métriques UA spécifiques
-│   │   │   └── PrometheusWidget.jsx    # Widget générique (gauge/graph)
+│   │   │   ├── MQMetrics.jsx           # Métriques IBM MQ (QMGR/Queue)
+│   │   │   ├── PrometheusWidget.jsx    # Widget générique (gauge/graph)
+│   │   │   ├── LoginPage.jsx           # Page de connexion
+│   │   │   ├── ProfilePage.jsx         # Page profil utilisateur
+│   │   │   ├── AdminPanel.jsx          # Panneau d'administration
+│   │   │   └── Sidebar.jsx             # Barre de navigation latérale
 │   │   │
-│   │   └── hooks/
-│   │       ├── usePrometheus.js        # Hook pour fetch Prometheus
-│   │       └── useUAPages.js           # Hook pour gestion pages UA
+│   │   ├── hooks/
+│   │   │   ├── useAuth.js              # Hook authentification JWT
+│   │   │   ├── usePrometheus.js        # Hook pour fetch Prometheus
+│   │   │   └── useUAPages.js           # Hook pour gestion pages UA
+│   │   │
+│   │   └── styles/
+│   │       └── styles.js               # Styles partagés
 │   │
-│   ├── .env                 # Variables d'environnement
+│   ├── .env                 # Variables d'environnement (VITE_API_URL)
 │   ├── vite.config.js       # Configuration Vite + proxy
-│   └── package.json
+│   ├── package.json
+│   └── index.html
 │
 └── public/
     ├── prometheus-global.json          # Configuration métriques globales

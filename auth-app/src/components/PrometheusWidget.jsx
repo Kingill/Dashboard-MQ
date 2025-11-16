@@ -31,30 +31,56 @@ const PrometheusWidget = ({ metric }) => {
 
   // Affichage pour type Gauge (valeur unique)
   if (type === 'gauge') {
-    const value = result.type === 'vector' && result.results.length > 0
-      ? result.results[0].value
-      : result.type === 'scalar'
-      ? result.value
-      : 'N/A';
+    let value = 'N/A';
+
+    // Format Prometheus brut (avec data.result)
+    if (result.data && result.data.result) {
+      if (result.data.result.length > 0) {
+        const firstResult = result.data.result[0];
+        if (firstResult.value && firstResult.value.length >= 2) {
+          value = parseFloat(firstResult.value[1]);
+        }
+      }
+    }
+    // Format formaté par le backend (avec type et results)
+    else if (result.type === 'vector' && result.results && result.results.length > 0) {
+      value = result.results[0].value;
+    }
+    // Format scalar
+    else if (result.type === 'scalar') {
+      value = result.value;
+    }
 
     return (
       <div style={styles.widget}>
         <h3 style={styles.title}>{name}</h3>
         <div style={styles.gaugeValue}>
-          {typeof value === 'number' ? value.toFixed(2) : value} {unit}
+          {typeof value === 'number' ? value.toFixed(0) : value} {unit}
         </div>
       </div>
     );
   }
 
   // Affichage pour type Graph (historique)
-  if (type === 'graph' && result.type === 'matrix') {
-    const chartData = result.results.length > 0
-      ? result.results[0].values.map(v => ({
-          time: new Date(v.timestamp * 1000).toLocaleTimeString(),
-          value: v.value
-        }))
-      : [];
+  if (type === 'graph') {
+    let chartData = [];
+
+    // Format Prometheus brut avec data.result
+    if (result.data && result.data.result) {
+      if (result.data.result.length > 0 && result.data.result[0].values) {
+        chartData = result.data.result[0].values.map(v => ({
+          time: new Date(v[0] * 1000).toLocaleTimeString(),
+          value: parseFloat(v[1])
+        }));
+      }
+    }
+    // Format formaté par le backend (matrix)
+    else if (result.type === 'matrix' && result.results && result.results.length > 0) {
+      chartData = result.results[0].values.map(v => ({
+        time: new Date(v.timestamp * 1000).toLocaleTimeString(),
+        value: v.value
+      }));
+    }
 
     return (
       <div style={styles.widget}>
@@ -71,7 +97,7 @@ const PrometheusWidget = ({ metric }) => {
               <YAxis tick={{ fontSize: 10 }} />
               <Tooltip />
               <Line 
-                type="monotone" 
+                type="stepAfter" 
                 dataKey="value" 
                 stroke="#8884d8" 
                 strokeWidth={2}
@@ -88,7 +114,18 @@ const PrometheusWidget = ({ metric }) => {
   }
 
   // Affichage pour type Table (plusieurs valeurs)
-  if (type === 'table' && result.type === 'vector') {
+  if (type === 'table') {
+    let tableData = [];
+
+    // Format Prometheus brut
+    if (result.data && result.data.result) {
+      tableData = result.data.result;
+    }
+    // Format formaté
+    else if (result.type === 'vector' && result.results) {
+      tableData = result.results;
+    }
+
     return (
       <div style={styles.widget}>
         <h3 style={styles.title}>{name}</h3>
@@ -100,28 +137,37 @@ const PrometheusWidget = ({ metric }) => {
             </tr>
           </thead>
           <tbody>
-            {result.results.map((r, idx) => (
-              <tr key={idx}>
-                <td style={styles.td}>
-                  {Object.entries(r.metric)
-                    .map(([k, v]) => `${k}="${v}"`)
-                    .join(', ')}
-                </td>
-                <td style={styles.td}>
-                  {r.value.toFixed(2)} {unit}
-                </td>
-              </tr>
-            ))}
+            {tableData.map((r, idx) => {
+              const metricLabels = Object.entries(r.metric || {})
+                .map(([k, v]) => `${k}="${v}"`)
+                .join(', ');
+              const value = r.value 
+                ? (Array.isArray(r.value) ? parseFloat(r.value[1]) : r.value)
+                : 'N/A';
+
+              return (
+                <tr key={idx}>
+                  <td style={styles.td}>{metricLabels || 'N/A'}</td>
+                  <td style={styles.td}>
+                    {typeof value === 'number' ? value.toFixed(2) : value} {unit}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     );
   }
 
-  // Fallback
+  // Fallback avec debug
   return (
     <div style={styles.widget}>
       <h3 style={styles.title}>{name}</h3>
+      <div style={styles.debug}>
+        <strong>Type:</strong> {type}<br/>
+        <strong>Format détecté:</strong> {result.data ? 'Prometheus brut' : result.type || 'inconnu'}
+      </div>
       <pre style={styles.raw}>{JSON.stringify(result, null, 2)}</pre>
     </div>
   );
@@ -189,6 +235,14 @@ const styles = {
   td: {
     padding: '8px',
     borderBottom: '1px solid #f0f0f0',
+  },
+  debug: {
+    fontSize: '12px',
+    backgroundColor: '#fff3e0',
+    padding: '8px',
+    borderRadius: '4px',
+    marginBottom: '8px',
+    color: '#666',
   },
   raw: {
     fontSize: '12px',

@@ -10,16 +10,17 @@
     {
       "id": "global_memory",
       "name": "Mémoire",
-      "query": "avg(process_resident_memory_bytes / 1024 / 1024)",
+      "query": "process_resident_memory_bytes / 1024 / 1024",
       "type": "gauge",
       "unit": "MB"
     },
     {
-      "id": "services_up",
-      "name": "Services",
-      "query": "count(up == 1)",
-      "type": "gauge",
-      "unit": "actifs"
+      "id": "cpu_graph",
+      "name": "Évolution CPU (1h)",
+      "query": "rate(process_cpu_seconds_total[5m]) * 100",
+      "type": "graph",
+      "unit": "%",
+      "description": "Tendance du CPU sur 1 heure"
     }
   ]
 }
