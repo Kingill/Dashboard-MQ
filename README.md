@@ -1,21 +1,28 @@
 # 📊 Dashboard MQ - Monitoring Multi-UA avec Prometheus
 
-Dashboard de monitoring en temps réel pour la gestion de files d'attente MessageQueue avec intégration Prometheus par unité d'affectation (UA).
+Dashboard de monitoring en temps réel pour la gestion de files d'attente MessageQueue avec intégration Prometheus par unité d'affectation (UA) et métriques IBM MQ dynamiques.
 
 ## 🚀 Fonctionnalités
 
+- **Authentification JWT** : Système d'authentification sécurisé avec gestion des rôles (Admin/User)
 - **Multi-UA** : Gestion de plusieurs unités d'affectation avec pages personnalisées
 - **Métriques temps réel** : Monitoring CPU, mémoire, goroutines, services actifs
-- **Graphiques interactifs** : Visualisation des tendances sur 1 heure avec recharts
-- **Auto-refresh** : Actualisation automatique toutes les 30 secondes
+- **Métriques IBM MQ dynamiques** : Découverte automatique des QMGR et Queues
+  - Sélection dynamique du Queue Manager
+  - Sélection dynamique des Queues
+  - 162+ métriques IBM MQ disponibles
+  - Plages de temps configurables (5m, 30m, 1h, 1j)
+- **Graphiques interactifs** : Visualisation des tendances avec recharts
+  - Graphiques en escalier (step) pour les métriques MQ
+  - Gauges pour valeurs instantanées
+- **Rafraîchissement manuel** : Contrôle total sur le rechargement des données
 - **Configuration dynamique** : Métriques Prometheus configurables par fichiers JSON
-- **Authentification** : Système d'authentification OAuth intégré
+- **Panneau d'administration** : Gestion des pages UA (création, modification, suppression)
 - **Responsive** : Interface adaptative pour desktop et mobile
 
 ---
 
 ## 📁 Structure du projet
-
 ```
 dashboard-mq/
 ├── api-server/              # Backend Express + API Prometheus
@@ -58,6 +65,32 @@ dashboard-mq/
         └── 8888.json                   # Config UA 8888
 ```
 
+### 🔑 Fichiers clés
+
+#### Backend (`api-server/`)
+- **`api-server.js`** : Serveur Express avec routes pour :
+  - Authentification JWT
+  - Gestion des pages UA (CRUD)
+  - Proxy Prometheus (query, query_range, health)
+  - Routes pour métriques globales et spécifiques UA
+
+#### Frontend (`auth-app/src/`)
+
+**Composants principaux :**
+- **`App.jsx`** : Gestion de l'authentification et navigation
+- **`Dashboard.jsx`** : Affichage des métriques globales, UA et MQ
+- **`MQMetrics.jsx`** : Sélection dynamique QMGR/Queue + graphiques IBM MQ
+- **`PrometheusWidget.jsx`** : Rendu des métriques (gauge/graph en escalier)
+
+**Hooks :**
+- **`useAuth.js`** : Authentification JWT avec décodage token
+- **`usePrometheus.js`** : Requêtes Prometheus (instantanées et range)
+- **`useUAPages.js`** : Gestion CRUD des pages UA
+
+**Configuration :**
+- **`prometheus-global.json`** : Définition des métriques globales (CPU, RAM, etc.)
+- **`ua-pages/*.json`** : Configurations spécifiques par UA avec requêtes Prometheus
+
 ---
 
 ## 🛠️ Installation
@@ -66,10 +99,10 @@ dashboard-mq/
 
 - **Node.js** >= 18.x
 - **Prometheus** sur http://localhost:9090
+- **IBM MQ Exporter** (optionnel, pour métriques MQ)
 - **npm** ou **yarn**
 
 ### 1. Cloner le repository
-
 ```bash
 git clone <votre-repo>
 cd dashboard-mq
@@ -92,7 +125,6 @@ npm install
 ### 3. Configuration
 
 #### Backend - Créer le fichier .env
-
 ```bash
 cd api-server
 cat > .env << 'EOF'
@@ -110,7 +142,6 @@ PROMETHEUS_URL=http://prometheus.example.com:9090
 ```
 
 #### Frontend - Créer le fichier .env
-
 ```bash
 cd auth-app
 cat > .env << 'EOF'
@@ -120,14 +151,13 @@ EOF
 ```
 
 #### Prometheus - Configuration
-Assurez-vous que Prometheus tourne sur http://localhost:9090
+Assurez-vous que Prometheus tourne sur http://localhost:9090 et qu'il scrape l'IBM MQ Exporter si vous souhaitez utiliser les métriques MQ.
 
 ---
 
 ## ⚙️ Variables d'environnement
 
 ### Backend (`api-server/.env`)
-
 ```bash
 # Port du serveur backend
 PORT=3001
@@ -147,7 +177,6 @@ PROMETHEUS_URL=http://localhost:9090
 | **IP réseau** | `PROMETHEUS_URL=http://192.168.1.50:9090` |
 
 ### Frontend (`auth-app/.env`)
-
 ```bash
 # URL du serveur OAuth
 VITE_OAUTH_URL=http://localhost:8000
@@ -185,7 +214,6 @@ prometheus --config.file=prometheus.yml
 ---
 
 ## 📊 Architecture
-
 ```
 ┌──────────────┐     HTTP      ┌──────────────┐    PromQL    ┌─────────────┐
 │   Frontend   │ ──────────>   │   Backend    │ ──────────>  │ Prometheus  │
@@ -215,14 +243,47 @@ prometheus --config.file=prometheus.yml
   └──────────────┘
 ```
 
-### Flux de données
+### 🔄 Flux de données
 
-1. **Frontend** fait une requête vers `/api/prometheus/global`
-2. **Proxy Vite** redirige vers `http://localhost:3001/api/prometheus/global`
-3. **Backend Express** exécute des requêtes PromQL vers Prometheus
-4. **Prometheus** retourne les métriques
-5. **Backend** formate les données et les renvoie au frontend
-6. **Frontend** affiche les métriques dans des widgets (gauges/graphiques)
+#### 1️⃣ **Authentification**
+```
+User → Login → Backend JWT → Token → Frontend Storage → Requêtes authentifiées
+```
+
+#### 2️⃣ **Métriques Globales**
+```
+Frontend → /api/prometheus/global → Backend → Prometheus → 
+prometheus-global.json (config) → Enrichissement → Frontend (widgets)
+```
+
+#### 3️⃣ **Métriques IBM MQ**
+```
+Frontend (MQMetrics) → 
+  1. Découverte: /api/prometheus/query?query={__name__=~"ibmmq.*"}
+  2. QMGR: Extraction des labels 'qmgr'
+  3. Queues: Extraction des labels 'queue'
+  4. Métriques: /api/prometheus/query_range (graphiques)
+→ Backend → Prometheus → IBM MQ Exporter → Widgets
+```
+
+#### 4️⃣ **Pages UA**
+```
+Frontend → /api/ua-pages/:code → Backend → 
+Lecture JSON (public/ua-pages/) → Frontend Dashboard
+```
+
+### 🎯 Fonctionnement MQMetrics
+
+Le composant `MQMetrics.jsx` implémente une découverte dynamique :
+
+1. **Découverte des métriques** : `{__name__=~"ibmmq.*"}` → 162 métriques trouvées
+2. **Extraction QMGR** : Parse les labels `qmgr`, `qmname`, `queue_manager`
+3. **Extraction Queues** : Parse les labels `queue`, `queue_name` par QMGR
+4. **Affichage dynamique** : 
+   - Gauges : valeurs instantanées (entiers pour messages)
+   - Graphiques : historique avec `query_range` (step charts)
+5. **Rafraîchissement manuel** : Bouton pour recharger à la demande
+6. **Pas d'auto-refresh** : Évite le clignotement des graphiques
 
 ---
 
@@ -231,22 +292,28 @@ prometheus --config.file=prometheus.yml
 ### Métriques globales
 
 Éditer `public/prometheus-global.json` :
-
 ```json
 {
   "queries": [
     {
       "id": "global_cpu",
       "name": "CPU Global",
-      "query": "avg(rate(process_cpu_seconds_total[5m])) * 100",
+      "query": "rate(process_cpu_seconds_total[5m]) * 100",
       "type": "gauge",
       "unit": "%",
       "description": "Utilisation CPU moyenne"
     },
     {
+      "id": "global_memory",
+      "name": "Mémoire",
+      "query": "process_resident_memory_bytes / 1024 / 1024",
+      "type": "gauge",
+      "unit": "MB"
+    },
+    {
       "id": "cpu_trend",
       "name": "Tendance CPU (1h)",
-      "query": "avg(rate(process_cpu_seconds_total[1m])) * 100",
+      "query": "rate(process_cpu_seconds_total[5m]) * 100",
       "type": "graph",
       "unit": "%",
       "description": "Évolution du CPU sur 1 heure"
@@ -258,7 +325,6 @@ prometheus --config.file=prometheus.yml
 ### Métriques par UA
 
 Éditer `public/ua-pages/UA2164.json` :
-
 ```json
 {
   "title": "Dashboard TestUA",
@@ -285,15 +351,36 @@ prometheus --config.file=prometheus.yml
 
 ### Types de widgets disponibles
 
-| Type | Description | Usage |
-|------|-------------|-------|
-| `gauge` | Valeur unique | Affiche la valeur actuelle (ex: CPU: 2.5%) |
-| `graph` | Graphique temporel | Affiche une courbe d'évolution sur 1h |
-| `table` | Tableau multi-valeurs | Affiche plusieurs séries dans un tableau |
+| Type | Description | Usage | Formatage |
+|------|-------------|-------|-----------|
+| `gauge` | Valeur unique | Affiche la valeur actuelle | Entiers pour messages, 2 décimales pour autres |
+| `graph` | Graphique temporel | Affiche une courbe d'évolution | Step chart (escalier) |
+| `table` | Tableau multi-valeurs | Affiche plusieurs séries dans un tableau | - |
+
+### Métriques IBM MQ disponibles
+
+Le dashboard découvre automatiquement toutes les métriques `ibmmq_*` disponibles dans Prometheus. Exemples :
+
+- `ibmmq_queue_depth` - Profondeur de la queue
+- `ibmmq_queue_oldest_message_age` - Âge du plus ancien message
+- `ibmmq_queue_mqput_mqput1_count` - Nombre de messages mis en queue
+- `ibmmq_queue_mqget_count` - Nombre de messages récupérés
+- `ibmmq_queue_input_handles` - Handles d'entrée ouverts
+- `ibmmq_queue_output_handles` - Handles de sortie ouverts
+- `ibmmq_qmgr_status` - Statut du Queue Manager
+- `ibmmq_qmgr_connection_count` - Nombre de connexions
+- Et 150+ autres métriques...
 
 ---
 
 ## 🌐 Endpoints API
+
+### Authentification
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/login` | Connexion utilisateur (retourne JWT) |
+| GET | `/api/auth/verify` | Vérification token JWT |
 
 ### Pages UA
 
@@ -311,11 +398,12 @@ prometheus --config.file=prometheus.yml
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/prometheus/health` | Santé de Prometheus |
-| GET | `/api/prometheus/global` | Métriques globales |
+| GET | `/api/prometheus/global` | Métriques globales configurées |
 | GET | `/api/prometheus/ua/:name` | Métriques d'une UA spécifique |
 | GET | `/api/prometheus/query` | Requête PromQL instantanée |
-| GET | `/api/prometheus/query_range` | Requête PromQL temporelle |
-| POST | `/api/prometheus/query/multiple` | Requêtes multiples |
+| GET | `/api/prometheus/query_range` | Requête PromQL temporelle (historique) |
+| GET | `/api/prometheus/labels/:name` | Valeurs d'un label Prometheus |
+| POST | `/api/prometheus/query/multiple` | Requêtes multiples en parallèle |
 
 ### Exemples de requêtes
 
@@ -334,36 +422,59 @@ curl http://localhost:3001/api/prometheus/ua/UA2164 | jq .
 curl "http://localhost:3001/api/prometheus/query?query=up" | jq .
 ```
 
+#### Découverte métriques IBM MQ
+```bash
+curl "http://localhost:3001/api/prometheus/query?query=%7B__name__%3D~%22ibmmq.*%22%7D" | jq .
+```
+
+#### Requête range (historique)
+```bash
+curl "http://localhost:3001/api/prometheus/query_range?query=ibmmq_queue_depth&start=1700000000&end=1700003600&step=15s" | jq .
+```
+
 ---
 
 ## 🎨 Interface utilisateur
 
 ### Dashboard principal
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Dashboard MQ - Code UA: UA2164         [Profil] [Déconnexion]│
+├─────────────────────────────────────────────────────────────┤
+│ 📊 Métriques Globales                  [🔄 Rafraîchir]     │
+│ ┌──────┐ ┌──────┐ ┌───────────────────────────────┐        │
+│ │ CPU  │ │ Mem  │ │  Évolution CPU (1h)           │        │
+│ │0.04% │ │90 MB │ │  [Graphique en escalier]      │        │
+│ └──────┘ └──────┘ └───────────────────────────────┘        │
+├─────────────────────────────────────────────────────────────┤
+│ 🔷 Métriques IBM MQ - UA2164    [🔄 Rafraîchir] 15:42:13  │
+│                                                              │
+│ QUEUE MANAGER: [TEST ▼]  QUEUE: [QL.TEST ▼]  PLAGE: [5m ▼]│
+│                                                              │
+│ ┌──────────┐ ┌────────────────────────────┐ ┌──────────┐   │
+│ │Profondeur│ │ Évolution Profondeur Queue │ │Profondeur│   │
+│ │  Queue   │ │                            │ │   Max    │   │
+│ │          │ │  [Graphique escalier]      │ │          │   │
+│ │35 messages│ │                            │ │5000 messages│
+│ └──────────┘ └────────────────────────────┘ └──────────┘   │
+│                                                              │
+│ ┌──────────┐ ┌────────────────────────────┐ ┌──────────┐   │
+│ │Message   │ │ Évolution Âge Message      │ │Taux      │   │
+│ │le + ancien│ │                            │ │d'entrée  │   │
+│ │          │ │  [Graphique escalier]      │ │          │   │
+│ │12 secondes│ │                            │ │0.00 msg/s│   │
+│ └──────────┘ └────────────────────────────┘ └──────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
 
-```
-┌─────────────────────────────────────────────┐
-│ Dashboard MQ - Code UA: UA2164              │
-├─────────────────────────────────────────────┤
-│ 📊 Métriques Globales Prometheus  🔄 30s   │
-│ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐       │
-│ │ CPU  │ │ Mem  │ │Gorou │ │ Serv │       │
-│ │0.04% │ │90 MB │ │ 45   │ │  1   │       │
-│ └──────┘ └──────┘ └──────┘ └──────┘       │
-│                                             │
-│ [Graphique Tendance CPU sur 1h]            │
-├─────────────────────────────────────────────┤
-│ Messages | Succès | Users | Erreurs        │
-│  1,247   | 98.5%  |  24   |    3          │
-├─────────────────────────────────────────────┤
-│ 📈 Métriques UA2164 (TestUA)    🔄 30s     │
-│ ┌──────┐ ┌──────┐ ┌──────┐                │
-│ │ CPU  │ │ Mem  │ │Gorou │                │
-│ │0.04% │ │90 MB │ │ 45   │                │
-│ └──────┘ └──────┘ └──────┘                │
-│                                             │
-│ [Graphique Évolution CPU UA]               │
-└─────────────────────────────────────────────┘
-```
+### Panneau d'administration
+
+Accessible aux utilisateurs avec le rôle `admin` :
+
+- Création de nouvelles pages UA
+- Modification des pages existantes
+- Suppression de pages UA
+- Visualisation de toutes les UAs configurées
 
 ---
 
@@ -393,17 +504,115 @@ fetch(`${API_BASE}/prometheus/global`)  // ✅ Correct
 # Vérifier les requêtes vers /api/prometheus/*
 ```
 
+### Aucune métrique IBM MQ détectée
+
+**Vérifications** :
+1. IBM MQ Exporter est démarré et accessible
+2. Prometheus scrape correctement l'exporter MQ
+3. Les métriques sont visibles dans Prometheus : http://localhost:9090
+4. Tester la requête : `{__name__=~"ibmmq.*"}`
+
+### Graphiques qui clignotent
+
+**Solution** : Le composant MQMetrics a été modifié pour ne plus avoir d'auto-refresh. Utilisez le bouton "Rafraîchir" pour mettre à jour manuellement.
+
+### Authentification JWT expirée
+
+**Solution** : Le token JWT expire après 8h. Reconnectez-vous via la page de login.
+
+---
+
+## 🔐 Sécurité
+
+- **JWT** : Tokens avec expiration 8h
+- **Rôles** : Admin / User avec permissions différenciées
+  - **Admin** : Accès au panneau d'administration, gestion des pages UA
+  - **User** : Consultation des dashboards uniquement
+- **CORS** : Configuration pour environnement développement
+- **Proxy Vite** : Évite les problèmes CORS en dev
+- **Pas de stockage** : Les tokens sont en mémoire, pas de localStorage
+
 ---
 
 ## 📦 Technologies
 
-- **React 18** + **Vite** - Frontend
-- **Express** - Backend
-- **Prometheus** - Métriques
-- **recharts** - Graphiques
+### Frontend
+- **React 18** - Bibliothèque UI
+- **Vite** - Build tool et dev server
+- **recharts** - Graphiques interactifs
+- **lucide-react** - Icônes
+
+### Backend
+- **Express** - Framework Node.js
+- **axios** - Client HTTP pour Prometheus
+- **jsonwebtoken** - Gestion JWT
+- **cors** - Gestion des CORS
+
+### Monitoring
+- **Prometheus** - Système de métriques
+- **IBM MQ Exporter** - Exporter pour IBM MQ
+
+---
+
+## 🚀 Fonctionnalités avancées
+
+### Découverte automatique
+
+Le dashboard détecte automatiquement :
+- Tous les Queue Managers disponibles
+- Toutes les Queues par QMGR
+- Les 162+ métriques IBM MQ disponibles
+
+### Plages de temps configurables
+
+Choisissez la période d'analyse pour les graphiques :
+- **5 minutes** : Vue détaillée temps réel
+- **30 minutes** : Vue court terme
+- **1 heure** : Vue moyenne durée
+- **1 jour** : Vue long terme
+
+### Formatage intelligent
+
+- **Messages** : Affichés en entiers (35 au lieu de 35.00)
+- **Pourcentages** : Affichés avec 2 décimales (2.45%)
+- **Temps** : Affichés avec 2 décimales (12.34 secondes)
+
+### Graphiques optimisés
+
+- **Step charts** : Graphiques en escalier pour métriques discrètes
+- **Pas de clignotement** : Rafraîchissement manuel uniquement
+- **Responsive** : S'adaptent à la taille de l'écran
+
+---
+
+## 📝 Changelog
+
+### Version 2.0.0 (Actuelle)
+- ✅ Ajout authentification JWT
+- ✅ Métriques IBM MQ dynamiques
+- ✅ Découverte automatique QMGR/Queue
+- ✅ Graphiques en escalier (step charts)
+- ✅ Rafraîchissement manuel
+- ✅ Panneau d'administration
+- ✅ Support 162+ métriques IBM MQ
+- ✅ Formatage intelligent des valeurs
+- ✅ Gestion des rôles Admin/User
+
+### Version 1.0.0
+- ✅ Dashboard multi-UA
+- ✅ Métriques globales Prometheus
+- ✅ Métriques UA spécifiques
+- ✅ Auto-refresh 30s
+- ✅ Configuration JSON
 
 ---
 
 ## 👥 Auteur
 
-**Marquet Gilles** - Dashboard MQ avec intégration Prometheus
+**Marquet Gilles** - Dashboard MQ avec intégration Prometheus et métriques IBM MQ dynamiques
+
+---
+
+## 📄 Licence
+
+Ce projet est sous licence MIT.
